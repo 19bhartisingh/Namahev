@@ -1435,7 +1435,7 @@ async function sendChat(){
   document.getElementById('chatMessages').appendChild(typing);scrollChatBottom();
   try{
     const sysPrompt=`You are Vega, an expert EV consultant for NAMAH EV — a premium Indian electric vehicle showroom.\n\nSCOOTERS: M8 Single Light (₹45,000-₹70,000), STAR (₹55,000-₹80,000), Nine (₹55,000-₹80,000), Cardo (₹60,000-₹90,000)\nBIKES: Storm 150 (₹95,000-₹1,15,000), Raptor X (₹1,35,000)\nRICKSHAWS: Carry 3W (₹2,49,999-₹2,89,999), Vista E-Rick (₹1,99,999)\nLOADERS: 3 Wheeler (₹60,000-₹90,000), 2 Wheeler (₹60,000-₹90,000)\nSPARE PARTS: LFP Battery (₹24,999), BLDC Motor (₹14,999), BMS (₹4,999), Fast Charger (₹8,999)\n\nBattery: Lead Acid (1yr warranty) or Lithium (3-5yr warranty). EMI available. Reply in under 110 words. Be friendly. Language: ${currentLang==='hi'?'Hindi':'English'}.`;
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,system:sysPrompt,messages:chatHistory.slice(-6)})});
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt,messages:chatHistory.slice(-6),max_tokens:200})});
     const data=await res.json();
     document.getElementById(typingId)?.remove();
     const aiText=data.content?.find(c=>c.type==='text')?.text||"Sorry, I'm having trouble connecting. Please try again!";
