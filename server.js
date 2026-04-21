@@ -2,6 +2,7 @@ const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
 
+
 const app        = express();
 const PORT       = process.env.PORT       || 3000;
 const ADMIN_PASS = process.env.ADMIN_PASS || 'namahev2025';
@@ -30,7 +31,7 @@ async function sendWA(toNumber, message) {
   const res  = await fetch('https://api.fonnte.com/send', {
     method  : 'POST',
     headers : { 'Authorization': FONNTE_TOKEN },
-    body    : body.toString()
+    body    : body
   });
   const raw  = await res.text();
   console.log(`[WA] ← ${res.status} ${raw}`);
