@@ -2,13 +2,16 @@ const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
 
-
 const app        = express();
 const PORT       = process.env.PORT       || 3000;
 const ADMIN_PASS = process.env.ADMIN_PASS || 'namahev2025';
 
 const FONNTE_TOKEN = (process.env.FONNTE_TOKEN || 'WHwg9yUMGQS7v3Rfv1zT').trim();
 const WA_OWNER     = (process.env.WA_OWNER     || '918000152351').trim();
+
+
+
+
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,7 +23,7 @@ function writeLeads(l){ try { fs.writeFileSync(LEADS_FILE, JSON.stringify(l,null
 
 /* ── Fonnte send ───────────────────────────────────────────────── */
 async function sendWA(toNumber, message) {
-  const num = String(toNumber).replace(/\D/g,'');
+  const num = '+' + String(toNumber).replace(/\D/g,'');  // + forces international format
   const body = new URLSearchParams();
   body.append('target',  num);
   body.append('message', message);
