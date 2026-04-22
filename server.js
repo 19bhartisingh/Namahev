@@ -7,7 +7,7 @@ const app        = express();
 const PORT       = process.env.PORT       || 3000;
 const ADMIN_PASS = process.env.ADMIN_PASS || 'namahev2025';
 
-const FONNTE_TOKEN = (process.env.FONNTE_TOKEN || 'cPsSa4FeaD896y9eNYtz').trim();
+const FONNTE_TOKEN = (process.env.FONNTE_TOKEN || 'WHwg9yUMGQS7v3Rfv1zT').trim();
 const WA_OWNER     = (process.env.WA_OWNER     || '918000152351').trim();
 
 app.use(express.json());
