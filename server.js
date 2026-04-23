@@ -21,11 +21,28 @@ let waReady   = false;
 let currentQR = null;
 let waClient  = null;
 
+/* Find system Chromium installed by Nix (Railway) or fall back to env var */
+function getChromiumPath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+  const { execSync } = require('child_process');
+  const candidates = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'];
+  for (const bin of candidates) {
+    try { return execSync(`which ${bin}`, { stdio: ['pipe','pipe','ignore'] }).toString().trim(); }
+    catch {}
+  }
+  return null; // let Puppeteer use its own bundled Chrome as last resort
+}
+
 function initWhatsApp() {
+  const chromiumPath = getChromiumPath();
+  if (chromiumPath) console.log(`[WA] Using Chromium: ${chromiumPath}`);
+  else console.warn('[WA] No system Chromium found — using Puppeteer bundled Chrome');
+
   waClient = new Client({
     authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
     puppeteer: {
-      headless: true,
+      headless        : true,
+      executablePath  : chromiumPath || undefined,
       args: [
         '--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas','--disable-gpu',
