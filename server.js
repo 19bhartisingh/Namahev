@@ -17,9 +17,10 @@ const LEADS_FILE = path.join(__dirname, 'leads.json');
 function readLeads()   { try { return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8')); } catch { return []; } }
 function writeLeads(l) { try { fs.writeFileSync(LEADS_FILE, JSON.stringify(l, null, 2)); } catch {} }
 
-let waReady   = false;
-let currentQR = null;
-let waClient  = null;
+let waReady      = false;
+let currentQR    = null;
+let waClient     = null;
+let readyWatchdog = null;
 
 /* Find system Chromium installed by Nix (Railway) or fall back to env var */
 function getChromiumPath() {
@@ -36,17 +37,26 @@ function getChromiumPath() {
 function initWhatsApp() {
   const chromiumPath = getChromiumPath();
   if (chromiumPath) console.log(`[WA] Using Chromium: ${chromiumPath}`);
-  else console.warn('[WA] No system Chromium found — using Puppeteer bundled Chrome');
+  else console.warn('[WA] No system Chromium — using bundled');
 
   waClient = new Client({
     authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
     puppeteer: {
-      headless        : true,
-      executablePath  : chromiumPath || undefined,
+      headless       : true,
+      executablePath : chromiumPath || undefined,
       args: [
-        '--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas','--disable-gpu',
-        '--no-first-run','--no-zygote','--single-process','--disable-extensions'
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-accelerated-2d-canvas',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--no-first-run',
+        '--mute-audio',
+        '--hide-scrollbars'
       ]
     }
   });
@@ -63,25 +73,36 @@ function initWhatsApp() {
 
   waClient.on('ready', () => {
     waReady = true; currentQR = null;
-    console.log('✅ WhatsApp ready!');
+    clearTimeout(readyWatchdog);
+    console.log('✅ WhatsApp READY — messages will now send!');
   });
 
-  waClient.on('authenticated', () => console.log('🔐 WhatsApp authenticated'));
+  waClient.on('authenticated', () => {
+    console.log('🔐 WhatsApp authenticated — waiting for ready event...');
+    // Watchdog: if ready doesn't fire within 60s after auth, restart
+    readyWatchdog = setTimeout(() => {
+      console.error('❌ Ready event never fired after 60s — restarting client');
+      waClient.destroy().catch(()=>{}).finally(() => setTimeout(initWhatsApp, 3000));
+    }, 60000);
+  });
 
-  waClient.on('auth_failure', () => {
+  waClient.on('auth_failure', (msg) => {
     waReady = false;
-    console.error('❌ WhatsApp auth failed — restarting in 10s');
+    clearTimeout(readyWatchdog);
+    console.error('❌ Auth failed:', msg, '— restarting in 10s');
     setTimeout(initWhatsApp, 10000);
   });
 
   waClient.on('disconnected', (r) => {
     waReady = false;
+    clearTimeout(readyWatchdog);
     console.warn('⚠️  Disconnected:', r, '— restarting in 10s');
     setTimeout(initWhatsApp, 10000);
   });
 
   waClient.initialize().catch(e => {
     console.error('❌ Init error:', e.message, '— retry in 15s');
+    clearTimeout(readyWatchdog);
     setTimeout(initWhatsApp, 15000);
   });
 }
@@ -89,18 +110,19 @@ function initWhatsApp() {
 initWhatsApp();
 
 async function sendWA(toNumber, message) {
-  const num = String(toNumber).replace(/\D/g, '');
+  const num    = String(toNumber).replace(/\D/g, '');
+  const chatId = num + '@c.us';
+
   if (!waReady || !waClient) {
-    console.warn(`[WA] Not ready — will retry ${num} in 30s`);
-    setTimeout(() => sendWA(num, message), 30000);
+    console.warn(`[WA] Not ready — skipping message to ${num}. Check /api/wa-status`);
     return;
   }
-  const chatId = num + '@c.us';
+
   try {
     await waClient.sendMessage(chatId, message);
-    console.log(`[WA] ✅ → ${chatId}`);
+    console.log(`[WA] ✅ Sent → ${chatId}`);
   } catch (e) {
-    console.error(`[WA] ❌ → ${chatId}:`, e.message);
+    console.error(`[WA] ❌ Failed → ${chatId}:`, e.message);
   }
 }
 
