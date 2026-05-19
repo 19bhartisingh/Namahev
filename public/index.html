@@ -1245,30 +1245,25 @@ function enquireFromModal(){if(activeProduct)document.getElementById('fProduct')
 
 /* ══════════════════════════════════════════════
    WHATSAPP ENGINE
-   Calls /api/leads on the server.
-   Server saves the lead AND sends both WA
-   messages via Fonnte — no token in browser.
+   Posts to /api/leads → server saves lead and
+   sends WhatsApp to BOTH owner and customer
+   via Meta Cloud API. No token in browser.
 ══════════════════════════════════════════════ */
 
-/* Post lead to server → server triggers WA automatically */
 function _sendBothSilent(lead) {
   return fetch('/api/leads', {
     method  : 'POST',
     headers : { 'Content-Type': 'application/json' },
     body    : JSON.stringify({
       name    : lead.name,
-      phone   : lead.phone,      // "91XXXXXXXXXX"
+      phone   : lead.phone,
       email   : lead.email,
       product : lead.product,
       message : lead.message
     })
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (!data.success) console.warn('[API] Lead save issue:', data);
-    return data;
-  })
-  .catch(function(e) { console.error('[API] /api/leads error:', e); });
+  .then(function(r){ return r.json(); })
+  .catch(function(e){ console.error('[API]', e); });
 }
 
 /* ══════════════════════════════════════════════
@@ -1358,42 +1353,46 @@ function showSuccessScreen(lead){
   var box = document.getElementById('successBox');
   var fn  = lead.name.split(' ')[0];
 
-  /* Remove any old injected content */
+  /* Clear any old injected content */
   var old = box.querySelector('.success-dynamic');
   if(old) old.remove();
+  document.getElementById('successText').innerHTML = '';
 
-  document.getElementById('successTitle').textContent = 'Enquiry Received, ' + fn + '! ✅';
+  document.getElementById('successTitle').textContent = 'Thank You, ' + fn + '! 🎉';
 
-  /* Summary rows */
   var rows = [
-    {label:'👤 Name',   value: lead.name},
-    {label:'📞 Phone',  value: lead.phoneFmt}
+    {l: 'Name',    v: lead.name},
+    {l: 'Phone',   v: lead.phoneFmt}
   ];
-  if(lead.email)   rows.push({label:'📧 Email',   value: lead.email});
-  if(lead.product) rows.push({label:'🛵 Vehicle', value: lead.product});
+  if(lead.email)   rows.push({l: 'Email',   v: lead.email});
+  if(lead.product) rows.push({l: 'Vehicle', v: lead.product});
 
-  var summaryHTML = rows.map(function(r){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;">'
-         + '<span style="color:var(--text3);">' + r.label + '</span>'
-         + '<span style="color:var(--text);font-weight:600;">' + r.value + '</span>'
+  var summary = rows.map(function(r){
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;'
+         + 'border-bottom:1px solid var(--border);font-size:.85rem;">'
+         + '<span style="color:var(--text3);">' + r.l + '</span>'
+         + '<span style="color:var(--text);font-weight:600;">' + r.v + '</span>'
          + '</div>';
   }).join('');
 
-  var waStatus = '<p style="color:var(--emerald);font-size:.88rem;margin-bottom:14px;">⚡ WhatsApp messages sent automatically to you and our team.</p>';
-
   var dyn = document.createElement('div');
   dyn.className = 'success-dynamic';
-  dyn.innerHTML = waStatus
-    + '<div style="background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:16px;">' + summaryHTML + '</div>'
+  dyn.innerHTML =
+    '<p style="color:var(--emerald);font-size:.92rem;margin-bottom:16px;line-height:1.6;">'
+    + '📲 WhatsApp messages have been sent!<br>'
+    + '<span style="font-size:.82rem;color:var(--text2);">Our team received your enquiry. '
+    + 'You will receive a confirmation on <strong style="color:var(--text);">'
+    + lead.phoneFmt + '</strong>.</span></p>'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:18px;">'
+    + summary + '</div>'
     + '<p style="font-size:.78rem;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:8px;">WHAT HAPPENS NEXT</p>'
-    + '<p style="font-size:.85rem;color:var(--text2);line-height:1.9;">✅ EV expert calls within <strong style="color:var(--text);">24 hours</strong><br>'
-    + '✅ Best price &amp; current offers shared<br>'
+    + '<p style="font-size:.88rem;color:var(--text2);line-height:2.0;">'
+    + '✅ Our EV expert will call you within <strong style="color:var(--text);">24 hours</strong><br>'
+    + '✅ Best price &amp; current offers will be shared<br>'
     + '✅ Easy EMI options available</p>';
 
-  document.getElementById('successText').innerHTML = '';
   var nb = document.getElementById('btnNewEnquiry');
   nb.parentNode.insertBefore(dyn, nb);
-
   box.classList.add('show');
   setTimeout(function(){ box.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
 }
@@ -1435,7 +1434,7 @@ async function sendChat(){
   document.getElementById('chatMessages').appendChild(typing);scrollChatBottom();
   try{
     const sysPrompt=`You are Vega, an expert EV consultant for NAMAH EV — a premium Indian electric vehicle showroom.\n\nSCOOTERS: M8 Single Light (₹45,000-₹70,000), STAR (₹55,000-₹80,000), Nine (₹55,000-₹80,000), Cardo (₹60,000-₹90,000)\nBIKES: Storm 150 (₹95,000-₹1,15,000), Raptor X (₹1,35,000)\nRICKSHAWS: Carry 3W (₹2,49,999-₹2,89,999), Vista E-Rick (₹1,99,999)\nLOADERS: 3 Wheeler (₹60,000-₹90,000), 2 Wheeler (₹60,000-₹90,000)\nSPARE PARTS: LFP Battery (₹24,999), BLDC Motor (₹14,999), BMS (₹4,999), Fast Charger (₹8,999)\n\nBattery: Lead Acid (1yr warranty) or Lithium (3-5yr warranty). EMI available. Reply in under 110 words. Be friendly. Language: ${currentLang==='hi'?'Hindi':'English'}.`;
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:sysPrompt,messages:chatHistory.slice(-6),max_tokens:200})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,system:sysPrompt,messages:chatHistory.slice(-6)})});
     const data=await res.json();
     document.getElementById(typingId)?.remove();
     const aiText=data.content?.find(c=>c.type==='text')?.text||"Sorry, I'm having trouble connecting. Please try again!";
